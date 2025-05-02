@@ -30,6 +30,8 @@ import {
   TicketCheck,
   LogOutIcon,
   Eye,
+  FileText,
+  Download,
 } from "lucide-react";
 import ReportIssue from "../report-issue/reportform";
 import ProjectDetails from "../project-details/projectform";
@@ -39,6 +41,7 @@ import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -266,15 +269,66 @@ const [showPaymentDialog, setShowPaymentDialog] = useState(false);
     console.log("Pay now for project", projectId);
   };  
 
-  const handleViewReport = (ticket) => {
-    setSelectedReport(ticket);
-    setShowViewDialog(true);
-  };
 
   const handleViewPayment = (payment) => {
     setSelectedPayment(payment);
     setShowPaymentDialog(true);
   };
+  const [selectedTicket, setSelectedTicket] = useState(null);
+const [searchTerm, setSearchTerm] = useState(''); // Default to show all tickets
+const [selectedProjectForDetails, setSelectedProjectForDetails] = useState(null);
+
+// For file downloads
+const handleFileDownload = (fileUrl) => {
+  window.open(fileUrl, '_blank');
+};
+
+// For downloading all files as ZIP
+const handleDownloadAllFiles = (projectId) => {
+  // Implement API call to get the ZIP file
+  console.log("Downloading all files for project:", projectId);
+};
+
+// For invoice generation
+const handleViewInvoice = (projectId) => {
+  // Implement invoice generation logic
+  console.log("Generating invoice for project:", projectId);
+};
+
+// Filter tickets based on search term and status filter
+useEffect(() => {
+  let filtered = [...reports];
+  
+  // Apply status filter
+  if (statusFilter !== 'All') {
+    filtered = filtered.filter(ticket => 
+      ticket.report_status.toLowerCase() === statusFilter.toLowerCase()
+    );
+  }
+  
+  // Apply search term
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    filtered = filtered.filter(ticket => 
+      ticket.title.toLowerCase().includes(term) || 
+      ticket.report_id.toString().includes(term)
+    );
+  }
+  
+  setFilteredTickets(filtered);
+}, [reports, searchTerm, statusFilter]);
+
+// Function to handle viewing a ticket
+const handleViewTicket = (ticket) => {
+  setSelectedTicket(ticket);
+};
+
+// Function to handle viewing a file
+const handleViewFile = (file) => {
+  // Implement file viewing logic here
+  console.log("Viewing file:", file);
+  // You might open a new modal or redirect to a file viewer
+};
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 w-full">
@@ -382,331 +436,543 @@ const [showPaymentDialog, setShowPaymentDialog] = useState(false);
         </div>
 
         {/* Projects Section */}
+        
         {activeSection === "projects" && (
-          <div className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 space-y-4 md:space-y-0">
-              <button
-                onClick={() => setShowNewProject(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Add New Project
-              </button>
+  <div className="p-6">
+    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 space-y-4 md:space-y-0">
+      <button
+        onClick={() => setShowNewProject(true)}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        Add New Project
+      </button>
 
-              <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
-                {/* Search Input */}
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search projects..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                  <Search
-                    size={18}
-                    className="absolute left-3 top-2.5 text-gray-400"
-                  />
-                </div>
+      <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
+        {/* Search Input */}
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search projects..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+          <Search
+            size={18}
+            className="absolute left-3 top-2.5 text-gray-400"
+          />
+        </div>
 
-                {/* Status Filter */}
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-40">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="All">All Status</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+        {/* Status Filter */}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full md:w-40">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Status</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+
+    {showNewProject ? (
+      <ProjectDetails onProjectAdded={handleProjectAdded} />
+    ) : loading ? (
+      <div className="flex justify-center items-center h-60">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-500 border-solid"></div>
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredProjects.length > 0 ? (
+          filteredProjects.map((project) => (
+            <div
+              key={project.project_id}
+              className="relative p-4 shadow-lg rounded-lg bg-white dark:bg-gray-800 cursor-pointer hover:shadow-xl transition-shadow"
+              onClick={() => setSelectedProjectForDetails(project)}
+            >
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {project.name}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                Domain: {project.domain}
+              </p>
+              <div className="flex items-center mb-1">
+                <span
+                  className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusStyle(project.status)}`}
+                >
+                  {project.status}
+                </span>
               </div>
-            </div>
+              <p className="text-sm text-gray-900 dark:text-gray-400 mb-1">
+                Requested on: {new Date(project.created_at).toISOString().split('T')[0]}
+              </p>
+              <p className="text-sm text-gray-900 dark:text-gray-400 mb-2">
+                Delivery by: {new Date(project.delivery_date).toISOString().split('T')[0]}
+              </p>
+              
+              {/* Edit Icon - Prevent click propagation to not trigger details popup */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditClick(project);
+                    }}
+                    className="absolute top-2 right-2 text-gray-500 hover:text-blue-600"
+                  >
+                    <Pencil size={18} />
+                  </button>
+                </AlertDialogTrigger>
+                {selectedProject?.id === project.id && (
+                  <div className="dark:bg-gray-900">
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Edit Domain</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          You can update the domain for{" "}
+                          <strong>{selectedProject.name}</strong>.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
 
-            {showNewProject ? (
-              <ProjectDetails onProjectAdded={handleProjectAdded} />
-            ) : loading ? (
-              <div className="flex justify-center items-center h-60">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-500 border-solid"></div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProjects.length > 0 ? (
-                  filteredProjects.map((project) => (
-                    <div
-                      key={project.project_id}
-                      className="relative p-4 shadow-lg rounded-lg bg-white dark:bg-gray-800"
-                    >
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {project.name}
-                      </h2>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                        Domain: {project.domain}
-                      </p>
-                      <div className="flex items-center mb-1">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusStyle(project.status)}`}
-                        >
-                          {project.status}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-900 dark:text-gray-400 mb-1">
-                        Requested on: {new Date(project.created_at).toISOString().split('T')[0]}
-                      </p>
-                      <p className="text-sm text-gray-900 dark:text-gray-400 mb-2">
-                        Delivery by: {new Date(project.delivery_date).toISOString().split('T')[0]}
-                      </p>
-                      {/* Edit Icon */}
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <button
-                            onClick={() => handleEditClick(project)}
-                            className="absolute top-2 right-2 text-gray-500 hover:text-blue-600"
-                          >
-                            <Pencil size={18} />
-                          </button>
-                        </AlertDialogTrigger>
-                        {selectedProject?.id === project.id && (
-                          <div className="dark:bg-gray-800">
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Edit Domain</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  You can update the domain for{" "}
-                                  <strong>{selectedProject.name}</strong>.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-
-                              <div className="mt-4 space-y-2">
-                                <div className="text-sm text-gray-600 dark:text-gray-300">
-                                  <strong>Project Name:</strong>{" "}
-                                  {selectedProject.name}
-                                </div>
-
-                                <Select
-                                  value={newDomain}
-                                  onValueChange={handleDomainChange}
-                                >
-                                  <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select a domain" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Artificial Intelligence">
-                                      Artificial Intelligence
-                                    </SelectItem>
-                                    <SelectItem value="Web Development">
-                                      Web Development
-                                    </SelectItem>
-                                    <SelectItem value="Blockchain">
-                                      Blockchain
-                                    </SelectItem>
-                                    <SelectItem value="Full Stack">
-                                      Full Stack
-                                    </SelectItem>
-                                    <SelectItem value="Data Science">
-                                      Data Science
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-
-                              <AlertDialogFooter>
-                                <AlertDialogCancel 
-                                  onClick={() => setSelectedProject(null)}
-                                >
-                                  Cancel
-                                </AlertDialogCancel>
-                                <AlertDialogAction onClick={handleSave}>
-                                  Save
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </div>
-                        )}
-                      </AlertDialog>
-                        {project.project_status === 'approved' && project.payment_status !== 'paid' && (
-                        <div className="absolute bottom-4 right-4">
-                          <button
-                            onClick={() => handlePayNow(project.project_id)}
-                            className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-green-700 transition cursor-pointer"
-                          >
-                            Pay Now
-                          </button>
+                      <div className="mt-4 space-y-2">
+                        <div className="text-sm text-gray-600 dark:text-gray-300">
+                          <strong>Project Name:</strong>{" "}
+                          {selectedProject.name}
                         </div>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <div className="col-span-3 text-center py-10 text-gray-500 dark:text-gray-400">
-                    No projects found matching your criteria
+
+                        <Select
+                          value={newDomain}
+                          onValueChange={handleDomainChange}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a domain" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Artificial Intelligence">
+                              Artificial Intelligence
+                            </SelectItem>
+                            <SelectItem value="Web Development">
+                              Web Development
+                            </SelectItem>
+                            <SelectItem value="Blockchain">
+                              Blockchain
+                            </SelectItem>
+                            <SelectItem value="Full Stack">
+                              Full Stack
+                            </SelectItem>
+                            <SelectItem value="Data Science">
+                              Data Science
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <AlertDialogFooter>
+                        <AlertDialogCancel 
+                          onClick={() => setSelectedProject(null)}
+                        >
+                          Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction onClick={handleSave}>
+                          Save
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
                   </div>
                 )}
-              </div>
-            )}
+              </AlertDialog>
+              
+              {project.project_status === 'approved' && project.payment_status !== 'paid' && (
+                <div className="absolute bottom-4 right-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePayNow(project.project_id);
+                    }}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-green-700 transition cursor-pointer"
+                  >
+                    Pay Now
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="col-span-3 text-center py-10 text-gray-500 dark:text-gray-400">
+            No projects found matching your criteria
           </div>
         )}
+      </div>
+    )}
+    
+    {/* Project Details Dialog */}
+    <Dialog open={!!selectedProjectForDetails} onOpenChange={(isOpen) => {
+      if (!isOpen) setSelectedProjectForDetails(null);
+    }}>
+      <DialogContent className="sm:max-w-4xl dark:bg-gray-900">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">Project Details</DialogTitle>
+          <DialogDescription>
+            Complete information about the selected project
+          </DialogDescription>
+        </DialogHeader>
+        
+        {selectedProjectForDetails && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Project Code</h3>
+                <p className="text-base font-semibold">{selectedProjectForDetails.project_code}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Project Name</h3>
+                <p className="text-base font-semibold">{selectedProjectForDetails.name}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Domain</h3>
+                <p className="text-base">{selectedProjectForDetails.domain}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Delivery Date</h3>
+                <p className="text-base">{new Date(selectedProjectForDetails.delivery_date).toLocaleDateString()}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Project Status</h3>
+                <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium text-white ${getStatusStyle(selectedProjectForDetails.status)}`}>
+                  {selectedProjectForDetails.status}
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</h3>
+                <p className="text-base">{selectedProjectForDetails.description || "No description available"}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Reference Documents</h3>
+                {selectedProjectForDetails.reference_pdf_url ? (
+                  <a 
+                    href={selectedProjectForDetails.reference_pdf_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-blue-600 hover:underline flex items-center"
+                  >
+                    <FileText size={16} className="mr-1" />
+                    View Document
+                  </a>
+                ) : (
+                  <p className="text-base">No reference documents available</p>
+                )}
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Admin Notes</h3>
+                <p className="text-base">{selectedProjectForDetails.admin_note || "No notes are available"}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Project Files</h3>
+                {selectedProjectForDetails.files && selectedProjectForDetails.files.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedProjectForDetails.files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span>{file.filename}</span>
+                        <button
+                          onClick={() => handleFileDownload(file.url)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => handleDownloadAllFiles(selectedProjectForDetails.project_id)}
+                      className="mt-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm flex items-center"
+                    >
+                      <Download size={14} className="mr-1" />
+                      Download ZIP
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-base">No files available</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+          <div>
+            {selectedProjectForDetails && selectedProjectForDetails.project_status === 'approved' && selectedProjectForDetails.payment_status !== 'paid' && (
+              <button
+                onClick={() => handlePayNow(selectedProjectForDetails.project_id)}
+                className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition"
+              >
+                Pay Now
+              </button>
+            )}
+          </div>
+          
+          <div className="flex space-x-3">
+            <button
+              onClick={() => handleViewInvoice(selectedProjectForDetails?.project_id)}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition flex items-center"
+            >
+              <FileText size={16} className="mr-2" />
+              View Invoice
+            </button>
+            
+            <DialogClose asChild>
+              <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition">
+                Close
+              </button>
+            </DialogClose>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  </div>
+)}
 
         {/* Reports Section */}
-       
         {activeSection === "reports" && (
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold">Ticket Reports</h2>
-              <button
-                onClick={() => setShowReportIssue(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Report Issue
-              </button>
-            </div>
+  <div className="p-6">
+    <div className="flex justify-between items-center mb-6">
+      <h2 className="text-lg font-semibold">Ticket Reports</h2>
+      <button
+        onClick={() => setShowReportIssue(true)}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        Report Issue
+      </button>
+    </div>
 
-            {showReportIssue ? (
-              <ReportIssue 
-              onSuccess={(newReport) => {
-                if (!newReport) return;
-                setShowReportIssue(false);
-                setReports((prev) => [newReport, ...prev]);
-                setFilteredTickets((prev) => [newReport, ...prev]);
-              }}              
-              />
-            ) : (
-              <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          ID
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Title
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Reported On
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredTickets.length > 0 ? (
-                        filteredTickets.map((ticket) => (
-                          <tr key={ticket.report_id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {ticket.report_id}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {ticket.title}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                              {new Date(ticket.created_at).toISOString().split('T')[0]}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="flex items-center">
-                                <span
-                                  className={`w-2 h-2 mr-2 rounded-full ${getStatusStyle(ticket.report_status)}`}
-                                ></span>
-                                <span className="text-sm text-gray-700 dark:text-gray-300">
-                                  {ticket.report_status}
-                                </span>
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <button
-                                onClick={() => handleViewReport(ticket)}
-                                className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs font-medium flex items-center"
-                              >
-                                <Eye size={12} className="mr-1" />
-                                View
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                            No tickets found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+    {showReportIssue ? (
+      <ReportIssue 
+        onSuccess={(newReport) => {
+          if (!newReport) return;
+          setShowReportIssue(false);
+          setReports((prev) => [newReport, ...prev]);
+          setFilteredTickets((prev) => [newReport, ...prev]);
+        }}              
+      />
+    ) : (
+      <>
+        <div className="mb-4 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4">
+          {/* Search input */}
+          <div className="relative flex-grow">
+            <input
+              type="text"
+              placeholder="Search tickets..."
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+            </span>
+          </div>
+
+          {/* Status filter */}
+          <select
+            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All</option>
+            <option value="open">Open</option>
+            <option value="closed">Closed</option>
+          </select>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Title
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Reported On
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredTickets.length > 0 ? (
+                  filteredTickets.map((ticket) => (
+                    <tr key={ticket.report_id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {ticket.report_id}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {ticket.title}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                        {new Date(ticket.created_at).toISOString().split('T')[0]}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="flex items-center">
+                          <span
+                            className={`w-2 h-2 mr-2 rounded-full ${getStatusStyle(ticket.report_status)}`}
+                          ></span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {ticket.report_status}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => handleViewTicket(ticket)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      No tickets found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Ticket Detail Dialog */}
+        {selectedTicket && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl max-h-screen overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Ticket Details
+                  </h3>
+                  <button
+                    onClick={() => setSelectedTicket(null)}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Report ID</p>
+                    <p className="text-base text-gray-900 dark:text-white">{selectedTicket.report_id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</p>
+                    <div className="flex items-center">
+                      <span
+                        className={`w-2 h-2 mr-2 rounded-full ${getStatusStyle(selectedTicket.report_status)}`}
+                      ></span>
+                      <span className="text-base text-gray-900 dark:text-white">
+                        {selectedTicket.report_status}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Title</p>
+                    <p className="text-base text-gray-900 dark:text-white">{selectedTicket.title}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Date Created</p>
+                    <p className="text-base text-gray-900 dark:text-white">
+                      {new Date(selectedTicket.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Description</p>
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-900 dark:text-white">
+                    {selectedTicket.description}
+                  </div>
+                </div>
+
+                {selectedTicket.attachments && selectedTicket.attachments.length > 0 && (
+                  <div className="mb-6">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Attached Files</p>
+                    <ul className="space-y-2">
+                      {selectedTicket.attachments.map((file, index) => (
+                        <li key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <span className="text-sm text-gray-900 dark:text-white">{file.name}</span>
+                          <button
+                            onClick={() => handleViewFile(file)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Replies</p>
+                  {selectedTicket.replies && selectedTicket.replies.length > 0 ? (
+                    <div className="space-y-4">
+                      {selectedTicket.replies.map((reply, index) => (
+                        <div key={index} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {reply.from}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {new Date(reply.date).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-gray-900 dark:text-white">{reply.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-900 dark:text-white text-center italic">
+                      Admin is analyzing your report
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-            
-            {showViewDialog && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl overflow-hidden">
-                  <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
-                    <h3 className="text-lg font-medium">Report Details</h3>
-                    <button 
-                      onClick={() => setShowViewDialog(false)}
-                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="p-6">
-                    <div className="mb-4">
-                      <div className="flex justify-between">
-                        <div>
-                          <h4 className="text-lg font-semibold">{selectedReport.title}</h4>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">ID: {selectedReport.report_id}</p>
-                        </div>
-                        <div className="flex items-center">
-                          <span className={`w-3 h-3 mr-2 rounded-full ${getStatusStyle(selectedReport.report_status)}`}></span>
-                          <span className="text-sm">{selectedReport.report_status}</span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                        Reported on: {new Date(selectedReport.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    
-                    <div className="mb-6">
-                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</h5>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded">
-                        {selectedReport.description}
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Attached Files</h5>
-                      {selectedReport.files && selectedReport.files.length > 0 ? (
-                        <ul className="space-y-2">
-                          {selectedReport.files.map((file, index) => (
-                            <li key={index} className="flex items-center">
-                              <Eye size={16} className="text-blue-500 mr-2" />
-                              <span className="text-sm text-blue-500 hover:underline cursor-pointer">
-                                {file}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">No files attached</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 flex justify-end">
-                    <button
-                      onClick={() => setShowViewDialog(false)}
-                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-500"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         )}
+      </>
+    )}
+  </div>
+)}
+    
 
         {/* Payments Section */}
         {activeSection === "payments" && (
