@@ -29,6 +29,7 @@ import {
   CircleDollarSign,
   TicketCheck,
   LogOutIcon,
+  Eye,
 } from "lucide-react";
 import ReportIssue from "../report-issue/reportform";
 import ProjectDetails from "../project-details/projectform";
@@ -57,7 +58,11 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [showNewProject, setShowNewProject] = useState(false);
   const [showReportIssue, setShowReportIssue] = useState(false);
-  
+  const [selectedReport, setSelectedReport] = useState(null);
+const [showViewDialog, setShowViewDialog] = useState(false);
+const [selectedPayment, setSelectedPayment] = useState(null);
+const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
 
@@ -260,6 +265,16 @@ export default function Dashboard() {
   const handlePayNow = (projectId) => {
     console.log("Pay now for project", projectId);
   };  
+
+  const handleViewReport = (ticket) => {
+    setSelectedReport(ticket);
+    setShowViewDialog(true);
+  };
+
+  const handleViewPayment = (payment) => {
+    setSelectedPayment(payment);
+    setShowPaymentDialog(true);
+  };
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 w-full">
@@ -533,6 +548,7 @@ export default function Dashboard() {
         )}
 
         {/* Reports Section */}
+       
         {activeSection === "reports" && (
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
@@ -572,6 +588,9 @@ export default function Dashboard() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Status
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Action
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -597,17 +616,92 @@ export default function Dashboard() {
                                 </span>
                               </span>
                             </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <button
+                                onClick={() => handleViewReport(ticket)}
+                                className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs font-medium flex items-center"
+                              >
+                                <Eye size={12} className="mr-1" />
+                                View
+                              </button>
+                            </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="4" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                          <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                             No tickets found
                           </td>
                         </tr>
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+            
+            {showViewDialog && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl overflow-hidden">
+                  <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+                    <h3 className="text-lg font-medium">Report Details</h3>
+                    <button 
+                      onClick={() => setShowViewDialog(false)}
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <div className="mb-4">
+                      <div className="flex justify-between">
+                        <div>
+                          <h4 className="text-lg font-semibold">{selectedReport.title}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">ID: {selectedReport.report_id}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <span className={`w-3 h-3 mr-2 rounded-full ${getStatusStyle(selectedReport.report_status)}`}></span>
+                          <span className="text-sm">{selectedReport.report_status}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                        Reported on: {new Date(selectedReport.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Description</h5>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                        {selectedReport.description}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Attached Files</h5>
+                      {selectedReport.files && selectedReport.files.length > 0 ? (
+                        <ul className="space-y-2">
+                          {selectedReport.files.map((file, index) => (
+                            <li key={index} className="flex items-center">
+                              <Eye size={16} className="text-blue-500 mr-2" />
+                              <span className="text-sm text-blue-500 hover:underline cursor-pointer">
+                                {file}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No files attached</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 flex justify-end">
+                    <button
+                      onClick={() => setShowViewDialog(false)}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -646,6 +740,9 @@ export default function Dashboard() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      Action
                     </th>
                   </tr>
                 </thead>
@@ -687,11 +784,20 @@ export default function Dashboard() {
                             </span>
                           </span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => handleViewPayment(payment)}
+                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-xs font-medium flex items-center"
+                          >
+                            <Eye size={12} className="mr-1" />
+                            View
+                          </button>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan="8" className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         No payments found
                       </td>
                     </tr>
@@ -699,6 +805,117 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
+            
+            {showPaymentDialog && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-2xl overflow-hidden">
+                  <div className="border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+                    <h3 className="text-lg font-medium">Payment Details</h3>
+                    <button 
+                      onClick={() => setShowPaymentDialog(false)}
+                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <div className="mb-4">
+                      <div className="flex justify-between">
+                        <div>
+                          <h4 className="text-lg font-semibold">{selectedPayment.project_name}</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Payment ID: {selectedPayment.payment_id}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <span className={`w-3 h-3 mr-2 rounded-full ${getStatusStyle(selectedPayment.payment_status)}`}></span>
+                          <span className="text-sm">
+                            {selectedPayment.payment_status === "partially_paid"
+                              ? "Partially Paid"
+                              : selectedPayment.payment_status.charAt(0).toUpperCase() + selectedPayment.payment_status.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                        Date: {new Date(selectedPayment.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    
+                    <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Total Amount</p>
+                        <p className="text-lg font-semibold">₹{selectedPayment.total_amount?.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Paid Amount</p>
+                        <p className="text-lg font-semibold text-green-600">₹{selectedPayment.paid_amount?.toLocaleString()}</p>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Pending Amount</p>
+                        <p className="text-lg font-semibold text-red-600">₹{selectedPayment.pending_amount?.toLocaleString()}</p>
+                      </div>
+                    </div>
+                    
+                    {selectedPayment.payment_history && selectedPayment.payment_history.length > 0 && (
+                      <div className="mb-6">
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Payment History</h5>
+                        <div className="bg-gray-50 dark:bg-gray-700 rounded overflow-hidden">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                            <thead className="bg-gray-100 dark:bg-gray-600">
+                              <tr>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Date</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Amount</th>
+                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Method</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                              {selectedPayment.payment_history.map((payment, index) => (
+                                <tr key={index}>
+                                  <td className="px-4 py-2 text-sm">{new Date(payment.date).toLocaleDateString()}</td>
+                                  <td className="px-4 py-2 text-sm">₹{payment.amount.toLocaleString()}</td>
+                                  <td className="px-4 py-2 text-sm">{payment.method}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedPayment.notes && (
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notes</h5>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                          {selectedPayment.notes}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {selectedPayment.files && selectedPayment.files.length > 0 && (
+                      <div className="mt-6">
+                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Attached Files</h5>
+                        <ul className="space-y-2">
+                          {selectedPayment.files.map((file, index) => (
+                            <li key={index} className="flex items-center">
+                              <Eye size={16} className="text-blue-500 mr-2" />
+                              <span className="text-sm text-blue-500 hover:underline cursor-pointer">
+                                {file}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 flex justify-end">
+                    <button
+                      onClick={() => setShowPaymentDialog(false)}
+                      className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
