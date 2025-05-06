@@ -136,7 +136,7 @@ export default function MultiStepForm() {
   };  
 
   return (
-    <div className="w-xl mx-auto p-8 bg-white dark:bg-gray-800 shadow-xl rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="md:w-xl sm:w-xl mx-auto p-8 bg-white dark:bg-gray-800 shadow-xl rounded-lg border border-gray-200 dark:border-gray-700">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Student Registration</h1>
         <p className="text-gray-600 dark:text-gray-300">Complete all steps to register</p>

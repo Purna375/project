@@ -8,7 +8,7 @@ export default function AuthForm() {
   const isLogin = tab === "login";
 
   return (
-    <div className="w-md p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg min-h-[400px]">
+    <div className="w-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg min-h-[400px]">
       <Toaster position="top-right" />
       <div className="flex justify-between mb-4">
         <button

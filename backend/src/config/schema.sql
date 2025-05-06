@@ -96,6 +96,7 @@ CREATE TABLE reports (
     description TEXT,
     image_url VARCHAR(255) NULL,
     pdf_url VARCHAR(255) NULL,
+    report_note TEXT NULL,
     report_status ENUM('open', 'closed') DEFAULT 'open',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
@@ -118,3 +119,35 @@ CREATE TABLE refunds (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (payment_id) REFERENCES payments(payment_id) ON DELETE CASCADE
 );
+
+
+-- ALTER TABLE students DROP INDEX roll_no;
+-- ALTER TABLE students ADD UNIQUE (team_id, roll_no);
+-- ALTER TABLE payments ADD COLUMN refund_status ENUM('pending', 'done') DEFAULT 'pending';
+-- ALTER TABLE payments DROP COLUMN refund_status;
+-- drop database project_proposal_web;
+
+show tables;
+
+select * from students;
+delete from reports where user_id=1;
+
+
+update payments set paid_amount="4999" where project_id=3;
+update projects set project_status="rejected" where project_id=6;
+
+INSERT INTO payments (user_id, project_id, total_amount, paid_amount, pending_amount, payment_status, created_at)
+VALUES (1, 1, 5000.00, 2000.00, 3000.00, 'partially_paid', NOW());
+
+INSERT INTO payments (user_id, project_id, total_amount, paid_amount, payment_status, created_at)
+VALUES (1, 1, 5000.00, 2000.00, 'partially_paid', NOW());
+
+ALTER TABLE payments
+MODIFY payment_status ENUM('pending', 'partially_paid', 'paid', 'refunded') DEFAULT 'pending';
+
+ALTER TABLE payments ADD UNIQUE (project_id);
+delete from payments where project_id=7;
+SELECT * FROM payments WHERE project_id = 5;
+
+ALTER TABLE reports
+ADD COLUMN report_note TEXT NULL AFTER pdf_url;

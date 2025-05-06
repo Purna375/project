@@ -21,6 +21,7 @@
     "nodemon": "^3.1.10"
   },
   "dependencies": {
+    "axios": "^1.9.0",
     "bcrypt": "^5.1.1",
     "dependencies": "^0.0.1",
     "express-validator": "^7.2.1",

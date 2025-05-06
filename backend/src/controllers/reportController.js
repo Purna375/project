@@ -36,17 +36,21 @@ exports.getUserReports = async (req, res) => {
     const { title, description } = req.body;
     const userId = req.user.id;
   
-    const image = req.files?.image?.[0]?.filename;
-    const pdf = req.files?.pdf?.[0]?.filename;
-  
-    const imageUrl = image ? `/uploads/reports/${image}` : null;
-    const pdfUrl = pdf ? `/uploads/reports/${pdf}` : null;
-  
+    const file = req.file?.filename;
+    const fileUrl = file ? `/uploads/reports/${file}` : null;  
+    
+    if (!title || !description || title.trim() === "" || description.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Title and description are required.",
+      });
+    }
+    
     try {
       const [insertResult] = await pool.query(`
-        INSERT INTO reports (user_id, title, description, image_url, pdf_url)
-        VALUES (?, ?, ?, ?, ?)
-      `, [userId, title, description, imageUrl, pdfUrl]);
+        INSERT INTO reports (user_id, title, description, pdf_url)
+        VALUES (?, ?, ?, ?)
+      `, [userId, title, description, fileUrl]);      
   
       const insertedId = insertResult.insertId;
   

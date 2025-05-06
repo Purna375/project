@@ -174,7 +174,7 @@ export default function ProjectDetails({ onProjectAdded }) {
   };
 
   return (
-    <div className="w-2xl mx-auto p-6 bg-white dark:bg-gray-900 shadow-lg rounded-md transition-colors duration-300 border dark:border-gray-700 border-gray-300">
+    <div className="md:w-2xl sm:xl mx-auto p-6 bg-white dark:bg-gray-900 shadow-lg rounded-md transition-colors duration-300 border dark:border-gray-700 border-gray-300">
       <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Project Details
       </h1>

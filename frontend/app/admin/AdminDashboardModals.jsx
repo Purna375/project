@@ -1,6 +1,6 @@
 // AdminDashboardModals.jsx
 import { useState, useEffect, useRef } from 'react';
-import { X, Check, AlertCircle, Upload, Paperclip, Send, Download, Eye, Edit, User, FileText } from 'lucide-react';
+import { X, Check, AlertCircle, Upload, Paperclip, Send, Download, Eye, Edit, User, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -12,11 +12,9 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
   const [editedProject, setEditedProject] = useState({ ...project });
   const [files, setFiles] = useState([]);
   const [note, setNote] = useState('');
-  const [pdfs, setPdfs] = useState([
-    { id: 1, name: 'Project Brief.pdf' },
-    { id: 2, name: 'Requirements Doc.pdf' },
-  ]);
+  const [pdfs, setPdfs] = useState([]);
   const fileInputRef = useRef(null);
+  const local_uri = "http://localhost:8000";
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -26,53 +24,132 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
   const handleFileChange = (e) => {
     setFiles(Array.from(e.target.files));
   };
+  
+  useEffect(() => {
+    if (project && project.reference_pdf_url) {
+      const filename = project.reference_pdf_url.split("\\").pop();
+      setPdfs([
+        {
+          id: 1,
+          name: filename,
+          url: `${local_uri}/${project.reference_pdf_url.replace("\\", "/")}`,
+        },
+      ]);
+    } else {
+      setPdfs([]);
+    }
+  }, [project]);  
 
   const handleSubmit = async () => {
     try {
-      // Simulate API call
-      // const token = localStorage.getItem("adminToken");
-      // const response = await axios.put(`http://localhost:8000/api/admin/projects/${project.project_id}`, editedProject, {
-      //   headers: { Authorization: `Bearer ${token}` },
-      // });
-      
+      const token = localStorage.getItem("adminToken");
+  
+      const response = await axios.put(
+        `${local_uri}/api/admin/update-project/${project.project_code}`,
+        {
+          project_name: editedProject.project_name,
+          domain: editedProject.domain,
+          delivery_date: editedProject.delivery_date,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+  
       toast.success("Project updated successfully!");
       onUpdate(editedProject);
+      onClose();
       setIsEditing(false);
     } catch (error) {
       toast.error("Failed to update project");
       console.error("Error updating project:", error);
     }
-  };
+  };  
 
-  const handleSendNote = () => {
+  const handleSendNote = async () => {
     if (!note.trim()) return;
-    toast.success("Note sent successfully!");
-    setNote('');
-  };
+  
+    try {
+      const token = localStorage.getItem("adminToken");
+      const response = await axios.post(`${local_uri}/api/admin/add-note`, {
+        projectCode: project.project_code,
+        note: note.trim()
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      });
+  
+      toast.success("Note sent successfully!");
+      setNote('');
+    } catch (error) {
+      console.error("Failed to send note:", error);
+      toast.error("Failed to send note.");
+    }
+  };  
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (files.length === 0) {
       toast.error("Please select files to upload");
       return;
     }
-    
-    // Simulate upload
-    toast.success(`${files.length} file(s) uploaded successfully!`);
-    setFiles([]);
+  
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    formData.append('projectCode', project.project_code);
+  
+    try {
+      const token = localStorage.getItem("adminToken");
+      const response = await axios.post(`${local_uri}/api/admin/upload-solution`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      toast.success("Files uploaded successfully!");
+      setFiles([]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload files.");
+    }
   };
 
-  const handleViewPdf = (pdfId) => {
-    toast.info(`Viewing PDF ${pdfId}`);
-    // Implement PDF viewer logic
-  };
+  const handleViewPdf = (url) => {
+    if (url) {
+      window.open(url, "_blank");
+    } else {
+      toast.error("No PDF URL available");
+    }
+  };  
 
   const openFileSelector = () => {
     fileInputRef.current.click();
   };
 
-  const openInvoice = () => {
-    toast.info("Opening invoice...");
-    // Implement invoice viewing logic
+  const openInvoice = async () => {
+    try {
+      const token = localStorage.getItem("adminToken");
+      const response = await axios.get(`${local_uri}/api/admin/invoice/${project.project_code}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+  
+      const invoiceUrl = response.data.invoiceUrl;
+  
+      if (invoiceUrl) {
+        window.open(invoiceUrl, "_blank");
+      } else {
+        toast.info("No invoice available");
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        toast.info("No invoice available for this project");
+      } else {
+        toast.error("Failed to open invoice");
+        console.error("Invoice error:", error);
+      }
+    }
   };
 
   return (
@@ -109,13 +186,13 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
                 <input
                   type="text"
                   name="project_id"
-                  value={editedProject.project_id || ''}
+                  value={editedProject.project_code || ''}
                   onChange={handleChange}
                   className="w-full p-2 border border-gray-300 rounded"
                   disabled
                 />
               ) : (
-                <p className="p-2 border border-gray-200 rounded bg-gray-50">{project.project_id || 'N/A'}</p>
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">{project.project_code || 'N/A'}</p>
               )}
             </div>
             
@@ -130,7 +207,7 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
                   className="w-full p-2 border border-gray-300 rounded"
                 />
               ) : (
-                <p className="p-2 border border-gray-200 rounded bg-gray-50">{project.project_name || 'N/A'}</p>
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">{project.project_name || 'N/A'}</p>
               )}
             </div>
 
@@ -145,8 +222,12 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
                   className="w-full p-2 border border-gray-300 rounded"
                 />
               ) : (
-                <p className="p-2 border border-gray-200 rounded bg-gray-50">{project.domain || 'N/A'}</p>
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">{project.domain || 'N/A'}</p>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Payment Status</label>
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">{project.payment_status || 'N/A'}</p>
             </div>
 
             <div>
@@ -160,7 +241,7 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
                   className="w-full p-2 border border-gray-300 rounded"
                 />
               ) : (
-                <p className="p-2 border border-gray-200 rounded bg-gray-50">
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
                   {project.delivery_date ? new Date(project.delivery_date).toLocaleDateString() : 'N/A'}
                 </p>
               )}
@@ -180,7 +261,7 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
                         <span>{pdf.name}</span>
                       </div>
                       <button
-                        onClick={() => handleViewPdf(pdf.id)}
+                        onClick={() => handleViewPdf(pdf.url)}
                         className="text-blue-600 hover:text-blue-800"
                       >
                         <Eye size={16} />
@@ -189,25 +270,7 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
                   ))}
                 </ul>
               ) : (
-                <p className="text-gray-500 text-sm">No documents available</p>
-              )}
-              
-              {isEditing && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium mb-1">Upload New Document</label>
-                  <div className="flex">
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      className="w-full p-2 border border-gray-300 rounded"
-                    />
-                    <button
-                      className="ml-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      <Upload size={16} />
-                    </button>
-                  </div>
-                </div>
+                <p className="text-gray-500 text-sm dark:bg-gray-800">No documents available</p>
               )}
             </div>
           </div>
@@ -228,26 +291,38 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Student Name</label>
-                    <p className="p-2 border border-gray-200 rounded bg-gray-50">
-                      {project.student_name || 'John Doe'}
+                    <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
+                      {project.full_name || 'Not Available'}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Student ID</label>
-                    <p className="p-2 border border-gray-200 rounded bg-gray-50">
-                      {project.student_id || 'STU12345'}
+                    <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
+                      {project.user_id || 'Not Available'}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Email</label>
-                    <p className="p-2 border border-gray-200 rounded bg-gray-50">
-                      {project.student_email || 'student@example.com'}
+                    <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
+                      {project.user_email || 'Not Available'}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Phone</label>
-                    <p className="p-2 border border-gray-200 rounded bg-gray-50">
-                      {project.student_phone || '+91 9876543210'}
+                    <label className="block text-sm font-medium mb-1">College</label>
+                    <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
+                      {project.college["name"] || 'Not Available'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Branch</label>
+                    <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
+                      {project.college["branch"] || 'Not Available'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Field</label>
+                    <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
+                      {project.college["domain"] || 'Not Available'}
                     </p>
                   </div>
                 </div>
@@ -297,6 +372,14 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
           </div>
 
           {/* Notes Section */}
+
+          {project.admin_notes && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Previous Note</label>
+            <p className="p-3 border border-gray-200 rounded bg-yellow-50 dark:bg-gray-800">{project.admin_notes}</p>
+          </div>
+        )}
+
           <div className="mb-6">
             <h4 className="text-md font-medium mb-2">Add Note</h4>
             <div className="border border-gray-200 rounded p-4">
@@ -320,12 +403,12 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
           </div>
         </div>
 
-        <div className="flex justify-between items-center p-4 border-t bg-gray-50">
+        <div className="flex justify-between items-center p-4 border-t bg-gray-50 dark:bg-gray-800 ">
           {isEditing ? (
             <>
               <button
                 onClick={() => setIsEditing(false)}
-                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 border border-gray-300 rounded text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 "
               >
                 Cancel
               </button>
@@ -340,7 +423,7 @@ export const ProjectViewModal = ({ project, onClose, onUpdate }) => {
             <>
               <button
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+                className="px-4 py-2 border border-gray-300 rounded text-gray-700 dark:text-white hover:bg-gray-100  dark:hover:bg-gray-700"
               >
                 Close
               </button>
@@ -391,8 +474,8 @@ export const ProjectApprovalModal = ({ project, onClose, onApprove }) => {
         
         <div className="mb-6">
           <p className="mb-4">You are about to approve the following project:</p>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <p><span className="font-medium">Project ID:</span> {project.project_id}</p>
+          <div className="bg-gray-50 dark:bg-gray-800 dark:border-gray-600 p-4 rounded-lg mb-4">
+            <p><span className="font-medium">Project ID:</span> {project.project_code}</p>
             <p><span className="font-medium">Project Name:</span> {project.project_name}</p>
             <p><span className="font-medium">Domain:</span> {project.domain}</p>
           </div>
@@ -425,7 +508,7 @@ export const ProjectApprovalModal = ({ project, onClose, onApprove }) => {
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-white dark:hover:text-black"
           >
             Cancel
           </button>
@@ -473,8 +556,8 @@ export const ProjectRejectionModal = ({ project, onClose, onReject }) => {
         
         <div className="mb-6">
           <p className="mb-4">You are about to reject the following project:</p>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <p><span className="font-medium">Project ID:</span> {project.project_id}</p>
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-4">
+            <p><span className="font-medium">Project ID:</span> {project.project_code}</p>
             <p><span className="font-medium">Project Name:</span> {project.project_name}</p>
             <p><span className="font-medium">Domain:</span> {project.domain}</p>
           </div>
@@ -505,7 +588,7 @@ export const ProjectRejectionModal = ({ project, onClose, onReject }) => {
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-white dark:hover:text-black"
           >
             Cancel
           </button>
@@ -541,7 +624,7 @@ export const DeleteConfirmationModal = ({ item, itemType, onClose, onDelete, war
         
         <div className="mb-6">
           <p className="mb-4">Are you sure you want to delete this {itemType}?</p>
-          <div className="bg-gray-50 p-4 rounded-lg">
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
             {itemType === 'project' && (
               <>
                 <p><span className="font-medium">ID:</span> {item.project_id}</p>
@@ -571,7 +654,7 @@ export const DeleteConfirmationModal = ({ item, itemType, onClose, onDelete, war
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-white dark:hover:text-black"
           >
             Cancel
           </button>
@@ -643,23 +726,20 @@ const StatusBadge = ({ status }) => {
 // Report View Modal Component
 export const ReportViewModal = ({ report, onClose, onReply }) => {
     const [reply, setReply] = useState('');
-    const [files, setFiles] = useState(
-      report.files || [
-        { id: 1, name: 'Issue Screenshot.jpg' },
-        { id: 2, name: 'Error Log.txt' }
-      ]
-    );
-  
+    const [files, setFiles] = useState([]);
+    const [reports, setReports] = useState([]);
+    const local_uri = "http://localhost:8000";
+
     const handleReply = () => {
       if (!reply.trim()) {
         toast.error("Please enter a reply");
         return;
       }
-      
+    
       onReply(report.report_id, reply);
-      setReply('');
+      setReply("");
       toast.success("Reply sent successfully!");
-    };
+    };    
   
     const handleViewFile = (fileId) => {
       toast.info(`Viewing file ${fileId}`);
@@ -686,31 +766,31 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
             <div className="grid grid-cols-1 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-medium mb-1">Report ID</label>
-                <p className="p-2 border border-gray-200 rounded bg-gray-50">{report.report_id || 'N/A'}</p>
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">{report.report_id || 'N/A'}</p>
               </div>
               
               <div>
                 <label className="block text-sm font-medium mb-1">Title</label>
-                <p className="p-2 border border-gray-200 rounded bg-gray-50">{report.title || 'N/A'}</p>
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">{report.title || 'N/A'}</p>
               </div>
   
               <div>
                 <label className="block text-sm font-medium mb-1">Status</label>
-                <div className="p-2 border border-gray-200 rounded bg-gray-50">
+                <div className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
                   <StatusBadge status={report.report_status || "No Status"} />
                 </div>
               </div>
   
               <div>
                 <label className="block text-sm font-medium mb-1">Date Created</label>
-                <p className="p-2 border border-gray-200 rounded bg-gray-50">
+                <p className="p-2 border border-gray-200 rounded bg-gray-50 dark:bg-gray-800">
                   {report.created_at ? new Date(report.created_at).toLocaleString() : 'N/A'}
                 </p>
               </div>
   
               <div>
                 <label className="block text-sm font-medium mb-1">Description</label>
-                <div className="p-3 border border-gray-200 rounded bg-gray-50 min-h-24 whitespace-pre-wrap">
+                <div className="p-3 border border-gray-200 rounded bg-gray-50 min-h-24 whitespace-pre-wrap dark:bg-gray-800">
                   {report.description || 'No description provided.'}
                 </div>
               </div>
@@ -718,27 +798,25 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
   
             {/* Files Section */}
             <div className="mb-6">
-              <h4 className="text-md font-medium mb-2">Attached Files</h4>
+              <h4 className="text-md font-medium mb-2">Attached File</h4>
               <div className="border border-gray-200 rounded p-4">
-                {files.length > 0 ? (
-                  <ul className="space-y-2">
-                    {files.map((file) => (
-                      <li key={file.id} className="flex justify-between items-center">
-                        <div className="flex items-center">
-                          <FileText size={16} className="mr-2 text-blue-600" />
-                          <span>{file.name}</span>
-                        </div>
-                        <button
-                          onClick={() => handleViewFile(file.id)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <Eye size={16} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                {report.pdf_url ? (
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <FileText size={16} className="mr-2 text-blue-600" />
+                      <span>{report.pdf_url.split("/").pop()}</span>
+                    </div>
+                    <a
+                      href={`${local_uri}${report.pdf_url.replace("\\", "/")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <Eye size={16} />
+                    </a>
+                  </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">No files attached</p>
+                  <p className="text-gray-500 text-sm">No file attached</p>
                 )}
               </div>
             </div>
@@ -767,10 +845,10 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
             </div>
           </div>
   
-          <div className="flex justify-end p-4 border-t bg-gray-50">
+          <div className="flex justify-end p-4 border-t bg-gray-50 dark:bg-gray-800">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
+              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 dark:text-white dark:hover:text-black"
             >
               Close
             </button>
@@ -800,7 +878,7 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
           
           <div className="mb-6">
             <p className="mb-4">Are you sure you want to close this report?</p>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-800">
               <p><span className="font-medium">Report ID:</span> {report.report_id}</p>
               <p><span className="font-medium">Title:</span> {report.title}</p>
               <p><span className="font-medium">Status:</span> <StatusBadge status={report.report_status} /></p>
@@ -814,7 +892,7 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
           <div className="flex justify-end space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-white dark:hover:text-black"
             >
               Cancel
             </button>
@@ -853,7 +931,7 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
           
           <div className="mb-6">
             <p className="mb-4">Are you sure you want to delete this report?</p>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-50 p-4 rounded-lg dark:bg-gray-800">
               <p><span className="font-medium">Report ID:</span> {report.report_id}</p>
               <p><span className="font-medium">Title:</span> {report.title}</p>
               <p><span className="font-medium">Status:</span> <StatusBadge status={report.report_status} /></p>
@@ -868,7 +946,7 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
           <div className="flex justify-end space-x-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:text-white dark:hover:text-black"
             >
               Cancel
             </button>
@@ -890,57 +968,82 @@ export const ReportViewModal = ({ report, onClose, onReply }) => {
   //Payments dialogs
   export const RefundDialog = ({ isOpen, payment, onClose, onConfirmRefund }) => {
     if (!isOpen) return null;
-    
+  
+    const isPending = payment.payment_status === "pending";
+  
     return (
-      <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-        <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-black">Confirm Refund</h3>
-          </div>
-          
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-sm font-medium text-gray-500">Project ID:</div>
-                <div className="text-sm text-gray-900">{payment.project_code}</div>
-                
-                <div className="text-sm font-medium text-gray-500">Project Name:</div>
-                <div className="text-sm text-gray-900">{payment.project_name}</div>
-                
-                <div className="text-sm font-medium text-gray-500">Username:</div>
-                <div className="text-sm text-gray-900">{payment.username || 'Not available'}</div>
-                
-                <div className="text-sm font-medium text-gray-500">Date:</div>
-                <div className="text-sm text-gray-900">{new Date(payment.created_at).toLocaleDateString('en-GB')}</div>
-                
-                <div className="text-sm font-medium text-gray-500">Deadline:</div>
-                <div className="text-sm text-gray-900">{payment.deadline ? new Date(payment.deadline).toLocaleDateString('en-GB') : 'Not available'}</div>
-                
-                <div className="text-sm font-medium text-gray-500">Total Payment:</div>
-                <div className="text-sm text-gray-900">₹{isNaN(payment.total_amount) ? "0.00" : Number(payment.total_amount).toFixed(2)}</div>
-                
-                <div className="text-sm font-medium text-gray-500">Payment Paid:</div>
-                <div className="text-sm text-gray-900">₹{isNaN(payment.paid_amount) ? "0.00" : Number(payment.paid_amount).toFixed(2)}</div>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full mx-4">
+        
+        {/* Modal Header */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-black dark:text-white">Confirm Refund</h3>
+        </div>
+    
+        {/* Modal Body */}
+        <div className="p-6">
+          {isPending && (
+            <div className="flex items-start bg-yellow-50 dark:bg-yellow-100 border border-yellow-300 text-yellow-800 p-3 rounded mb-4">
+              <AlertTriangle className="mr-2 mt-0.5" size={20} />
+              <span>
+                This user has not paid anything yet. Refund is not required.
+              </span>
+            </div>
+          )}
+    
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-300">Project ID:</div>
+              <div className="text-sm text-gray-900 dark:text-white">{payment.project_code}</div>
+    
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-300">Project Name:</div>
+              <div className="text-sm text-gray-900 dark:text-white">{payment.project_name}</div>
+    
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-300">Username:</div>
+              <div className="text-sm text-gray-900 dark:text-white">{payment.student_name || 'Not available'}</div>
+    
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-300">Date:</div>
+              <div className="text-sm text-gray-900 dark:text-white">
+                {new Date(payment.created_at).toLocaleDateString('en-GB')}
               </div>
+    
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-300">Deadline:</div>
+              <div className="text-sm text-gray-900 dark:text-white">
+                {payment.delivery_date ? new Date(payment.delivery_date).toLocaleDateString('en-GB') : 'Not available'}
+              </div>
+    
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-300">Total Payment:</div>
+              <div className="text-sm text-gray-900 dark:text-white">₹{Number(payment.total_amount || 0).toFixed(2)}</div>
+    
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-300">Payment Paid:</div>
+              <div className="text-sm text-gray-900 dark:text-white">₹{Number(payment.paid_amount || 0).toFixed(2)}</div>
             </div>
           </div>
-          
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-            <button 
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-            <button 
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none"
-              onClick={() => onConfirmRefund(payment)}
-            >
-              Confirm Refund
-            </button>
-          </div>
+        </div>
+    
+        {/* Modal Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
+          <button 
+            className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button 
+            disabled={isPending}
+            className={`px-4 py-2 rounded-md focus:outline-none ${
+              isPending 
+              ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' 
+              : 'bg-red-600 text-white hover:bg-red-700'
+            }`}
+            onClick={() => onConfirmRefund(payment)}
+          >
+            Confirm Refund
+          </button>
         </div>
       </div>
+    </div>
+    
     );
   };
 

@@ -7,7 +7,6 @@ import AdminLoginComponent from "./AdminLogin";
 function AdminLoginPage() {
   return (
     <div className="min-h-screen w-screen bg-gray-100 dark:bg-gray-900 text-black dark:text-white">
-      <ThemeToggle />
       <AdminLoginComponent />
     </div>
   );

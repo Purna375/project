@@ -3,11 +3,10 @@ const router = express.Router();
 const authenticateUser = require("../middlewares/authMiddleware");
 const authorizeAdmin = require("../middlewares/authorizeAdmin");
 const adminController = require("../controllers/adminController");
+const upload = require("../middlewares/multerConfig");
 
 router.post('/login', adminController.loginAdmin);
-
 router.use(authenticateUser, authorizeAdmin);
-
 router.get("/projects",authorizeAdmin, adminController.getAllProjects);
 router.patch("/projects/:id/status", adminController.updateProjectStatus);
 router.patch("/projects/:id/price", adminController.setProjectPrice);
@@ -18,5 +17,14 @@ router.post("/projects/reject/:projectId", authorizeAdmin, adminController.rejec
 router.post('/reports/close/:reportId', authorizeAdmin, adminController.closeReport);
 router.delete('/reports/:reportId', authorizeAdmin, adminController.deleteReport);
 router.delete('/projects/delete/:projectId', authorizeAdmin, adminController.deleteProject);
+router.post("/domains", upload.single("pdf"), adminController.addDomain);
+router.get("/domains", authorizeAdmin, adminController.getAllDomains);
+router.post("/domains/update/:id", upload.single("pdf"), adminController.updateDomain);
+router.post("/domains/delete/:id", authorizeAdmin, adminController.deleteDomain);
+router.post("/upload-solution", upload.array("files"), adminController.uploadProjectSolution);
+router.post('/add-note', authorizeAdmin, adminController.addProjectNote);
+router.get('/invoice/:projectCode', authorizeAdmin, adminController.getInvoice);
+router.put('/update-project/:projectCode', authorizeAdmin, adminController.updateProjectDetails);
+router.post( "/reports/:reportId/note", authorizeAdmin, adminController.updateReportNote);
 
 module.exports = router;

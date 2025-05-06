@@ -17,7 +17,7 @@ export default function ReportIssue({ onSuccess }) {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("description", description);
-      if (file) formData.append("file", file);
+      if (file) formData.append("pdf", file);
   
       const res = await axios.post(`${local_uri}/api/reports/create`, formData, {
         headers: {
@@ -82,7 +82,7 @@ export default function ReportIssue({ onSuccess }) {
         {/* File Upload (Optional) */}
         <div>
           <label className="block text-gray-700 dark:text-gray-200 font-medium">
-            Upload Screenshot (Optional)
+            Upload Screenshot or Pdf (Optional)
           </label>
           <input
             type="file"

@@ -31,7 +31,7 @@ exports.createProject = async (req, res) => {
     const projectStatus = "pending";
 
     const referencePdfUrl = uploadedFile
-      ? path.join("uploads", uploadedFile.filename)
+      ? path.join("uploads/projects", uploadedFile.filename)
       : null;
 
     await pool.execute(
